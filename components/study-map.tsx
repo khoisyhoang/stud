@@ -1,17 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import type { StudySession } from '@/lib/types';
 import { SessionCard } from './session-card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-// Global type declaration for Google Maps
-declare global {
-  interface Window {
-    google: any;
-    googleMapsScriptLoading?: boolean;
-  }
-}
 
 interface StudyMapProps {
   sessions: StudySession[];
@@ -27,21 +21,35 @@ interface MapState {
 const DEFAULT_CENTER = { lat: 37.7849, lng: -122.4094 }; // San Francisco
 const DEFAULT_ZOOM = 14;
 
+const mapStyles = [
+  { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2a4a' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1a1a2e' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e0e1a' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1f1f3a' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2a1a' }] },
+];
+
 export function StudyMap({
   sessions,
   onSessionSelect,
   selectedSessionId,
 }: StudyMapProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<Map<string, any>>(new Map());
   const [mapState, setMapState] = useState<MapState>({
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,
   });
   const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  });
+
+  const [map, setMap] = useState<google.maps.Map | null>(null);
 
   // Request user location
   useEffect(() => {
@@ -56,255 +64,170 @@ export function StudyMap({
           setMapState((prev) => ({ ...prev, center: loc }));
         },
         () => {
-          // User denied location or error - use default
           console.log('[v0] Using default location');
         }
       );
     }
-  }, []);
+  }, [navigator.geolocation]);
 
   // Handle external session selection (from carousel)
   useEffect(() => {
     if (selectedSessionId) {
       const session = sessions.find((s) => s.id === selectedSessionId);
-      if (session && mapRef.current) {
-        mapRef.current.panTo({ lat: session.lat, lng: session.lng });
-        mapRef.current.setZoom(16);
+      if (session && map) {
+        map.panTo({ lat: session.lat, lng: session.lng });
+        map.setZoom(16);
         setSelectedSession(session);
       }
     }
-  }, [selectedSessionId, sessions]);
+  }, [selectedSessionId, sessions, map]);
 
-  const getMarkerContent = useCallback((session: StudySession, isSelected: boolean) => {
+  const getMarkerIcon = useCallback((session: StudySession, isSelected: boolean) => {
     const statusColors = {
-      live: { bg: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)' },
-      'starting-soon': { bg: '#eab308', glow: 'rgba(234, 179, 8, 0.4)' },
-      finished: { bg: '#6b7280', glow: 'transparent' },
+      live: '#22c55e',
+      'starting-soon': '#eab308',
+      finished: '#6b7280',
     };
 
-    const colors = statusColors[session.status];
-    const size = isSelected ? 20 : 14;
-    const glowSize = isSelected ? 32 : 24;
-
-    const container = document.createElement('div');
-    container.className = 'marker-container';
-    container.style.cssText = `
-      position: relative;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    `;
-
-    if (session.status === 'live') {
-      const glow = document.createElement('div');
-      glow.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: ${glowSize}px;
-        height: ${glowSize}px;
-        background: ${colors.glow};
-        border-radius: 50%;
-        animation: pulse 2s ease-in-out infinite;
-      `;
-      container.appendChild(glow);
-    }
-
-    const dot = document.createElement('div');
-    dot.style.cssText = `
-      position: relative;
-      width: ${size}px;
-      height: ${size}px;
-      background: ${colors.bg};
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    `;
-    container.appendChild(dot);
-
-    return container;
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: statusColors[session.status],
+      fillOpacity: 1,
+      strokeColor: 'white',
+      strokeWeight: 2,
+      scale: isSelected ? 10 : 7,
+    };
   }, []);
 
-  // Initialize map
-  useEffect(() => {
-    const initMap = async () => {
-      if (!mapContainerRef.current || mapRef.current) return;
+  const onLoad = useCallback((map: google.maps.Map) => {
+    setMap(map);
+  }, []);
 
-      try {
-        const { Map } = await window.google.maps.importLibrary('maps') as any;
-        await window.google.maps.importLibrary('marker');
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
 
-        const map = new Map(mapContainerRef.current, {
-          center: mapState.center,
-          zoom: mapState.zoom,
-          mapId: 'deepwork-map',
-          gestureHandling: 'auto',
-          scrollwheel: true,
-          zoomControl: true,
-          styles: [
-            { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
-            { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
-            { elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
-            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2a4a' }] },
-            { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1a1a2e' }] },
-            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e0e1a' }] },
-            { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1f1f3a' }] },
-            { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2a1a' }] },
-          ],
-        });
-
-        mapRef.current = map;
-
-        // Add resize observer to handle container size changes
-        const resizeObserver = new ResizeObserver(() => {
-          if (mapRef.current) {
-            window.google.maps.event.trigger(mapRef.current, 'resize');
-          }
-        });
-        
-        if (mapContainerRef.current) {
-          resizeObserver.observe(mapContainerRef.current);
-        }
-
-        // Add click listener to close popup when clicking map
-        map.addListener('click', () => {
-          setSelectedSession(null);
-          onSessionSelect?.(null as unknown as StudySession);
-        });
-
-        setIsLoading(false);
-
-        // Trigger resize after a short delay to ensure proper initialization
-        setTimeout(() => {
-          if (mapRef.current) {
-            window.google.maps.event.trigger(mapRef.current, 'resize');
-          }
-        }, 100);
-
-        return () => {
-          resizeObserver.disconnect();
-        };
-      } catch (error) {
-        console.error('[v0] Error initializing map:', error);
-        setIsLoading(false);
-      }
-    };
-
-    // Load Google Maps script
-    if (!window.google?.maps && !window.googleMapsScriptLoading) {
-      window.googleMapsScriptLoading = true;
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=marker&v=weekly`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        window.googleMapsScriptLoading = false;
-        initMap();
-      };
-      script.onerror = () => {
-        window.googleMapsScriptLoading = false;
-        console.error('[v0] Failed to load Google Maps script');
-      };
-      document.head.appendChild(script);
-    } else if (window.google?.maps) {
-      initMap();
+  const handleMarkerClick = useCallback((session: StudySession) => {
+    setSelectedSession(session);
+    onSessionSelect?.(session);
+    if (map) {
+      map.panTo({ lat: session.lat, lng: session.lng });
+      map.setZoom(16);
     }
-  }, [mapState.center, mapState.zoom, onSessionSelect]);
+  }, [map, onSessionSelect]);
 
-  // Update markers when sessions change
-  useEffect(() => {
-    if (!mapRef.current || !window.google?.maps?.marker) return;
+  const handleMapClick = useCallback(() => {
+    setSelectedSession(null);
+    onSessionSelect?.(null as unknown as StudySession);
+  }, [onSessionSelect]);
 
-    const { AdvancedMarkerElement } = window.google.maps.marker;
+  const handleFocusOnCurrentLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
 
-    // Remove old markers that are no longer in sessions
-    markersRef.current.forEach((marker, id) => {
-      if (!sessions.find((s) => s.id === id)) {
-        marker.map = null;
-        markersRef.current.delete(id);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const loc = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+      
+      setUserLocation(loc);
+      setMapState({ center: loc, zoom: 16 });
+      
+      if (map) {
+        map.panTo(loc);
+        map.setZoom(16);
       }
-    });
-
-    // Add/update markers
-    sessions.forEach((session) => {
-      let marker = markersRef.current.get(session.id);
-      const isSelected = selectedSession?.id === session.id;
-
-      if (!marker) {
-        marker = new AdvancedMarkerElement({
-          map: mapRef.current,
-          position: { lat: session.lat, lng: session.lng },
-          content: getMarkerContent(session, isSelected),
-        });
-
-        marker.addListener('click', () => {
-          setSelectedSession(session);
-          onSessionSelect?.(session);
-          mapRef.current?.panTo({ lat: session.lat, lng: session.lng });
-        });
-
-        markersRef.current.set(session.id, marker);
+    } catch (error) {
+      if (error instanceof GeolocationPositionError) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            alert('Location access denied. Please enable location permissions in your browser settings.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            alert('Location information is unavailable.');
+            break;
+          case error.TIMEOUT:
+            alert('Location request timed out.');
+            break;
+          default:
+            alert('An unknown error occurred while getting your location.');
+        }
       } else {
-        // Update marker content if selection changed
-        marker.content = getMarkerContent(session, isSelected);
+        alert('Failed to get your location.');
       }
-    });
-  }, [sessions, selectedSession, getMarkerContent, onSessionSelect]);
-
-  // Add user location marker
-  useEffect(() => {
-    if (!mapRef.current || !userLocation || !window.google?.maps?.marker) return;
-
-    const { AdvancedMarkerElement } = window.google.maps.marker;
-
-    const userMarkerContent = document.createElement('div');
-    userMarkerContent.innerHTML = `
-      <div style="
-        width: 16px;
-        height: 16px;
-        background: #3b82f6;
-        border: 3px solid white;
-        border-radius: 50%;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3);
-      "></div>
-    `;
-
-    new AdvancedMarkerElement({
-      map: mapRef.current,
-      position: userLocation,
-      content: userMarkerContent,
-      title: 'Your location',
-    });
-  }, [userLocation]);
+    }
+  }, [map]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-border/50">
-      {/* Add pulse animation styles */}
-      <style jsx global>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-          50% { opacity: 0.3; transform: translate(-50%, -50%) scale(1.3); }
-        }
-      `}</style>
-
-      {isLoading && (
+      {!isLoaded ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-foreground" />
             <span className="text-sm text-muted-foreground">Loading map...</span>
           </div>
         </div>
-      )}
+      ) : (
+        <GoogleMap
+          mapContainerStyle={{
+            width: '100%',
+            height: '100%',
+            minHeight: '500px',
+          }}
+          center={mapState.center}
+          zoom={mapState.zoom}
+          options={{
+            styles: mapStyles,
+            gestureHandling: 'auto',
+            scrollwheel: true,
+            zoomControl: true,
+            mapId: 'deepwork-map',
+          }}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+          onClick={handleMapClick}
+        >
+          {/* User location marker */}
+          {userLocation && (
+            <Marker
+              position={userLocation}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: '#3b82f6',
+                fillOpacity: 1,
+                strokeColor: 'white',
+                strokeWeight: 3,
+                scale: 8,
+              }}
+              title="Your location"
+            />
+          )}
 
-      <div
-        ref={mapContainerRef}
-        className="h-full w-full"
-        style={{ 
-          minHeight: '500px',
-          width: '100%',
-          height: '100%'
-        }}
-      />
+          {/* Session markers */}
+          {sessions.map((session) => {
+            const isSelected = selectedSession?.id === session.id;
+            return (
+              <Marker
+                key={session.id}
+                position={{ lat: session.lat, lng: session.lng }}
+                icon={getMarkerIcon(session, isSelected)}
+                onClick={() => handleMarkerClick(session)}
+              />
+            );
+          })}
+        </GoogleMap>
+      )}
 
       {/* Session popup */}
       {selectedSession && (
@@ -321,6 +244,37 @@ export function StudyMap({
           />
         </div>
       )}
+
+      {/* Map controls */}
+      <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 transform">
+        <Button
+          onClick={handleFocusOnCurrentLocation}
+          size="lg"
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 border-0 px-8"
+          title="Focus on my location"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          Sessions nearby
+        </Button>
+      </div>
 
       {/* Map legend */}
       <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2 rounded-lg border border-border/50 bg-card/90 p-3 text-xs backdrop-blur-sm">
