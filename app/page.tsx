@@ -13,9 +13,10 @@ export default function HomePage() {
 
   // Calculate mock distances for carousel
   const sessionsWithDistance = useMemo(() => {
-    return mockSessions.map((session) => ({
+    const fixedDistances = [1.2, 2.4, 3.1, 4.1, 2.8, 1.5, 3.4, 2.1];
+    return mockSessions.map((session, index) => ({
       ...session,
-      distance: Math.random() * 5 + 0.2, // Mock distance 0.2-5.2 km
+      distance: fixedDistances[index % fixedDistances.length],
     }));
   }, []);
 
@@ -24,57 +25,59 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <>
+      <div className="min-h-screen bg-background">
+        <Navbar />
 
-      <main className="pt-16">
-        {/* Hero Section with Map */}
-        <section className="relative">
-          {/* Live Counter - positioned above map */}
-          <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2">
-            <LiveCounter />
-          </div>
+        <main className="pt-16">
+          {/* Hero Section with Map */}
+          <section className="relative">
+            {/* Live Counter - positioned above map */}
+            <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2">
+              <LiveCounter />
+            </div>
 
-          {/* Full-width Map */}
-          <div className="h-[70vh] min-h-[500px] w-full">
-            <StudyMap
-              sessions={sessionsWithDistance}
-              onSessionSelect={handleSessionSelect}
-              selectedSessionId={selectedSessionId}
-            />
-          </div>
-        </section>
+            {/* Full-width Map */}
+            <div className="h-[70vh] min-h-[500px] w-full">
+              <StudyMap
+                sessions={sessionsWithDistance}
+                onSessionSelect={handleSessionSelect}
+                selectedSessionId={selectedSessionId}
+              />
+            </div>
+          </section>
 
-        {/* Upcoming Sessions Section */}
-        <section className="border-t border-border/50 bg-background">
-          <div className="mx-auto max-w-7xl px-6 py-12">
-            <SessionCarousel
-              sessions={sessionsWithDistance}
-              onSessionSelect={handleSessionSelect}
-            />
-          </div>
-        </section>
+          {/* Upcoming Sessions Section */}
+          <section className="border-t border-border/50 bg-background">
+            <div className="mx-auto max-w-7xl px-6 py-12">
+              <SessionCarousel
+                sessions={sessionsWithDistance}
+                onSessionSelect={handleSessionSelect}
+              />
+            </div>
+          </section>
 
-        {/* Footer placeholder for future expansion */}
-        <footer className="border-t border-border/50 py-8">
-          <div className="mx-auto max-w-7xl px-6">
-            <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-              <p>DeepWork Map — Find your focus</p>
-              <div className="flex items-center gap-6">
-                <a href="#" className="hover:text-foreground transition-colors">
-                  About
-                </a>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Privacy
-                </a>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Terms
-                </a>
+          {/* Footer placeholder for future expansion */}
+          <footer className="border-t border-border/50 py-8">
+            <div className="mx-auto max-w-7xl px-6">
+              <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
+                <p>DeepWork Map — Find your focus</p>
+                <div className="flex items-center gap-6">
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    About
+                  </a>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Privacy
+                  </a>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Terms
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        </footer>
-      </main>
-    </div>
+          </footer>
+        </main>
+      </div>
+    </>
   );
 }

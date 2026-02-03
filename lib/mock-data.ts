@@ -1,6 +1,7 @@
 import type { StudySession } from './types';
 
 // Mock sessions around San Francisco (default center)
+const baseDate = new Date('2024-01-15T10:00:00'); // Fixed base date
 export const mockSessions: StudySession[] = [
   {
     id: '1',
@@ -8,7 +9,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Computer Science',
     lat: 37.7849,
     lng: -122.4094,
-    startTime: new Date(),
+    startTime: baseDate,
     duration: 120,
     participants: 12,
     maxParticipants: 20,
@@ -21,7 +22,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Mathematics',
     lat: 37.7799,
     lng: -122.4144,
-    startTime: new Date(Date.now() + 15 * 60 * 1000), // 15 min from now
+    startTime: new Date(baseDate.getTime() + 15 * 60 * 1000), // 15 min from base
     duration: 90,
     participants: 8,
     maxParticipants: 15,
@@ -34,7 +35,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Medicine',
     lat: 37.7919,
     lng: -122.4014,
-    startTime: new Date(),
+    startTime: baseDate,
     duration: 180,
     participants: 6,
     maxParticipants: 10,
@@ -47,7 +48,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Physics',
     lat: 37.7749,
     lng: -122.4194,
-    startTime: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+    startTime: new Date(baseDate.getTime() - 3 * 60 * 60 * 1000), // 3 hours before base
     duration: 120,
     participants: 15,
     maxParticipants: 15,
@@ -60,7 +61,7 @@ export const mockSessions: StudySession[] = [
     subject: 'AI/ML',
     lat: 37.7879,
     lng: -122.3964,
-    startTime: new Date(Date.now() + 30 * 60 * 1000), // 30 min from now
+    startTime: new Date(baseDate.getTime() + 30 * 60 * 1000), // 30 min from base
     duration: 150,
     participants: 18,
     maxParticipants: 25,
@@ -73,7 +74,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Chemistry',
     lat: 37.7699,
     lng: -122.4294,
-    startTime: new Date(),
+    startTime: baseDate,
     duration: 90,
     participants: 4,
     maxParticipants: 12,
@@ -86,7 +87,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Test Prep',
     lat: 37.7829,
     lng: -122.4244,
-    startTime: new Date(),
+    startTime: baseDate,
     duration: 60,
     participants: 9,
     maxParticipants: 15,
@@ -99,7 +100,7 @@ export const mockSessions: StudySession[] = [
     subject: 'Computer Science',
     lat: 37.7769,
     lng: -122.4044,
-    startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    startTime: new Date(baseDate.getTime() - 2 * 60 * 60 * 1000),
     duration: 90,
     participants: 20,
     maxParticipants: 20,

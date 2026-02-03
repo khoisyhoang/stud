@@ -5,7 +5,7 @@ import { getMockLiveCount } from '@/lib/mock-data';
 import { Flame } from 'lucide-react';
 
 export function LiveCounter() {
-  const [count, setCount] = useState(getMockLiveCount());
+  const [count, setCount] = useState(1234);
 
   useEffect(() => {
     // Simulate real-time updates - replace with WebSocket/API later

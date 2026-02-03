@@ -4,7 +4,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type { StudySession } from '@/lib/types';
 import { SessionCard } from './session-card';
 import { cn } from '@/lib/utils';
-import * as google from 'google.maps'; // Import Google Maps
+
+// Global type declaration for Google Maps
+declare global {
+  interface Window {
+    google: any;
+    googleMapsScriptLoading?: boolean;
+  }
+}
 
 interface StudyMapProps {
   sessions: StudySession[];
@@ -26,8 +33,8 @@ export function StudyMap({
   selectedSessionId,
 }: StudyMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map());
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
   const [mapState, setMapState] = useState<MapState>({
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,
@@ -124,14 +131,15 @@ export function StudyMap({
       if (!mapContainerRef.current || mapRef.current) return;
 
       try {
-        const { Map } = await google.maps.importLibrary('maps') as google.maps.MapsLibrary;
-        await google.maps.importLibrary('marker');
+        const { Map } = await window.google.maps.importLibrary('maps') as any;
+        await window.google.maps.importLibrary('marker');
 
         const map = new Map(mapContainerRef.current, {
           center: mapState.center,
           zoom: mapState.zoom,
           mapId: 'deepwork-map',
-          disableDefaultUI: true,
+          gestureHandling: 'auto',
+          scrollwheel: true,
           zoomControl: true,
           styles: [
             { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
@@ -147,6 +155,17 @@ export function StudyMap({
 
         mapRef.current = map;
 
+        // Add resize observer to handle container size changes
+        const resizeObserver = new ResizeObserver(() => {
+          if (mapRef.current) {
+            window.google.maps.event.trigger(mapRef.current, 'resize');
+          }
+        });
+        
+        if (mapContainerRef.current) {
+          resizeObserver.observe(mapContainerRef.current);
+        }
+
         // Add click listener to close popup when clicking map
         map.addListener('click', () => {
           setSelectedSession(null);
@@ -154,6 +173,17 @@ export function StudyMap({
         });
 
         setIsLoading(false);
+
+        // Trigger resize after a short delay to ensure proper initialization
+        setTimeout(() => {
+          if (mapRef.current) {
+            window.google.maps.event.trigger(mapRef.current, 'resize');
+          }
+        }, 100);
+
+        return () => {
+          resizeObserver.disconnect();
+        };
       } catch (error) {
         console.error('[v0] Error initializing map:', error);
         setIsLoading(false);
@@ -161,14 +191,22 @@ export function StudyMap({
     };
 
     // Load Google Maps script
-    if (!window.google?.maps) {
+    if (!window.google?.maps && !window.googleMapsScriptLoading) {
+      window.googleMapsScriptLoading = true;
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=marker&v=weekly`;
       script.async = true;
       script.defer = true;
-      script.onload = initMap;
+      script.onload = () => {
+        window.googleMapsScriptLoading = false;
+        initMap();
+      };
+      script.onerror = () => {
+        window.googleMapsScriptLoading = false;
+        console.error('[v0] Failed to load Google Maps script');
+      };
       document.head.appendChild(script);
-    } else {
+    } else if (window.google?.maps) {
       initMap();
     }
   }, [mapState.center, mapState.zoom, onSessionSelect]);
@@ -177,7 +215,7 @@ export function StudyMap({
   useEffect(() => {
     if (!mapRef.current || !window.google?.maps?.marker) return;
 
-    const { AdvancedMarkerElement } = google.maps.marker;
+    const { AdvancedMarkerElement } = window.google.maps.marker;
 
     // Remove old markers that are no longer in sessions
     markersRef.current.forEach((marker, id) => {
@@ -217,7 +255,7 @@ export function StudyMap({
   useEffect(() => {
     if (!mapRef.current || !userLocation || !window.google?.maps?.marker) return;
 
-    const { AdvancedMarkerElement } = google.maps.marker;
+    const { AdvancedMarkerElement } = window.google.maps.marker;
 
     const userMarkerContent = document.createElement('div');
     userMarkerContent.innerHTML = `
@@ -261,7 +299,11 @@ export function StudyMap({
       <div
         ref={mapContainerRef}
         className="h-full w-full"
-        style={{ minHeight: '500px' }}
+        style={{ 
+          minHeight: '500px',
+          width: '100%',
+          height: '100%'
+        }}
       />
 
       {/* Session popup */}

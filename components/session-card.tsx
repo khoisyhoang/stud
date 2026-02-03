@@ -38,11 +38,13 @@ const statusConfig: Record<
 };
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  // Use fixed format to avoid hydration issues
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  const displayMinutes = minutes < 10 ? `0${minutes}` : minutes;
+  return `${displayHours}:${displayMinutes} ${ampm}`;
 }
 
 function formatDuration(minutes: number): string {
