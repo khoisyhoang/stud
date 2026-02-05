@@ -25,7 +25,7 @@ export function LiveCounter() {
       <span className="text-lg font-semibold tabular-nums tracking-tight">
         {count.toLocaleString()}
       </span>
-      <span className="text-sm text-muted-foreground">people studying right now</span>
+      <span className="text-sm ">people studying right now</span>
     </div>
   );
 }
