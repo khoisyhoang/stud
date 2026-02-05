@@ -11,6 +11,11 @@ interface SessionCardProps {
   variant?: 'popup' | 'carousel';
   onClose?: () => void;
   onClick?: () => void;
+  onJoinSession?: (sessionId: string) => void;
+  onLeaveSession?: (sessionId: string) => void;
+  onViewDetails?: () => void;
+  isUserJoined?: boolean;
+  isUserHost?: boolean;
 }
 
 const typeLabels: Record<StudySession['type'], string> = {
@@ -60,6 +65,11 @@ export function SessionCard({
   variant = 'popup',
   onClose,
   onClick,
+  onJoinSession,
+  onLeaveSession,
+  onViewDetails,
+  isUserJoined = false,
+  isUserHost = false,
 }: SessionCardProps) {
   const statusStyle = statusConfig[session.status];
   const seatsLeft = session.maxParticipants - session.participants;
@@ -109,10 +119,10 @@ export function SessionCard({
 
         <div className="mt-auto flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            {seatsLeft > 0 ? `${seatsLeft} seats left` : 'Full'}
+            {isUserJoined ? 'You joined' : seatsLeft > 0 ? `${seatsLeft} seats left` : 'Full'}
           </span>
           <span className="text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-            View on map →
+            {isUserJoined ? 'View details →' : 'View on map →'}
           </span>
         </div>
       </button>
@@ -181,16 +191,63 @@ export function SessionCard({
       </div>
 
       <div className="border-t border-border/50 p-4">
-        <Button
-          className="w-full"
-          disabled={session.status === 'finished' || seatsLeft === 0}
-        >
-          {session.status === 'finished'
-            ? 'Session Ended'
-            : seatsLeft === 0
-              ? 'Session Full'
-              : 'Join Session'}
-        </Button>
+        <div className="flex gap-2">
+          {isUserHost ? (
+            <>
+              <Button className="flex-1" variant="outline">
+                Host Controls
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={onViewDetails}
+                className="flex-1"
+              >
+                View Details
+              </Button>
+            </>
+          ) : isUserJoined ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => onLeaveSession?.(session.id)}
+                className="flex-1"
+              >
+                Leave Session
+              </Button>
+              <Button className="flex-1">
+                Open Session
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={onViewDetails}
+                className="flex-1"
+              >
+                View Details
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                className="flex-1"
+                disabled={session.status === 'finished' || seatsLeft === 0}
+                onClick={() => onJoinSession?.(session.id)}
+              >
+                {session.status === 'finished'
+                  ? 'Session Ended'
+                  : seatsLeft === 0
+                    ? 'Session Full'
+                    : 'Join Session'}
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={onViewDetails}
+                className="flex-1"
+              >
+                View Details
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

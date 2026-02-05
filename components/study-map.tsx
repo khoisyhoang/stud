@@ -11,6 +11,7 @@ interface StudyMapProps {
   sessions: StudySession[];
   onSessionSelect?: (session: StudySession) => void;
   selectedSessionId?: string | null;
+  onViewDetails?: (sessionId: string) => void;
 }
 
 interface MapState {
@@ -36,6 +37,7 @@ export function StudyMap({
   sessions,
   onSessionSelect,
   selectedSessionId,
+  onViewDetails,
 }: StudyMapProps) {
   const [mapState, setMapState] = useState<MapState>({
     center: DEFAULT_CENTER,
@@ -109,17 +111,16 @@ export function StudyMap({
 
   const handleMarkerClick = useCallback((session: StudySession) => {
     setSelectedSession(session);
-    onSessionSelect?.(session);
+    // Remove onSessionSelect call to prevent double modal
     if (map) {
       map.panTo({ lat: session.lat, lng: session.lng });
       map.setZoom(16);
     }
-  }, [map, onSessionSelect]);
+  }, [map]);
 
   const handleMapClick = useCallback(() => {
     setSelectedSession(null);
-    onSessionSelect?.(null as unknown as StudySession);
-  }, [onSessionSelect]);
+  }, []);
 
   const handleFocusOnCurrentLocation = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -241,6 +242,7 @@ export function StudyMap({
             session={selectedSession}
             variant="popup"
             onClose={() => setSelectedSession(null)}
+            onViewDetails={() => onViewDetails?.(selectedSession.id)}
           />
         </div>
       )}

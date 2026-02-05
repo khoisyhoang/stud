@@ -35,11 +35,13 @@ export function Navbar() {
           <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
             Start Session
           </Button>
-          <Avatar className="h-8 w-8 cursor-pointer border border-border">
-            <AvatarFallback className="bg-secondary text-xs">
-              <User className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
+          <Link href="/profile">
+            <Avatar className="h-8 w-8 cursor-pointer border border-border">
+              <AvatarFallback className="bg-secondary text-xs">
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+          </Link>
         </div>
       </nav>
     </header>

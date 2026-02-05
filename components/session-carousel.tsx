@@ -9,9 +9,20 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface SessionCarouselProps {
   sessions: StudySession[];
   onSessionSelect: (session: StudySession) => void;
+  onJoinSession?: (sessionId: string) => void;
+  onLeaveSession?: (sessionId: string) => void;
+  joinedSessions?: Set<string>;
+  hostedSessions?: Set<string>;
 }
 
-export function SessionCarousel({ sessions, onSessionSelect }: SessionCarouselProps) {
+export function SessionCarousel({ 
+  sessions, 
+  onSessionSelect, 
+  onJoinSession, 
+  onLeaveSession, 
+  joinedSessions = new Set(), 
+  hostedSessions = new Set() 
+}: SessionCarouselProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -80,6 +91,10 @@ export function SessionCarousel({ sessions, onSessionSelect }: SessionCarouselPr
               session={session}
               variant="carousel"
               onClick={() => onSessionSelect(session)}
+              onJoinSession={onJoinSession}
+              onLeaveSession={onLeaveSession}
+              isUserJoined={joinedSessions.has(session.id)}
+              isUserHost={hostedSessions.has(session.id)}
             />
           ))}
         </div>

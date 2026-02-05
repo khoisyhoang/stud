@@ -1,28 +1,89 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Navbar } from '@/components/navbar';
 import { LiveCounter } from '@/components/live-counter';
 import { StudyMap } from '@/components/study-map';
 import { SessionCarousel } from '@/components/session-carousel';
+import { CreateSessionModal } from '@/components/create-session-modal';
+import { FloatingActionButton } from '@/components/floating-action-button';
 import { mockSessions } from '@/lib/mock-data';
 import type { StudySession } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
+  const router = useRouter();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [sessions, setSessions] = useState(mockSessions);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [joinedSessions, setJoinedSessions] = useState<Set<string>>(new Set());
+  const [hostedSessions, setHostedSessions] = useState<Set<string>>(new Set());
 
   // Calculate mock distances for carousel
   const sessionsWithDistance = useMemo(() => {
     const fixedDistances = [1.2, 2.4, 3.1, 4.1, 2.8, 1.5, 3.4, 2.1];
-    return mockSessions.map((session, index) => ({
+    return sessions.map((session, index) => ({
       ...session,
       distance: fixedDistances[index % fixedDistances.length],
     }));
+  }, [sessions]);
+
+  const handleSessionSelect = useCallback((session: StudySession) => {
+    setSelectedSessionId(session?.id ?? null);
   }, []);
 
-  const handleSessionSelect = (session: StudySession) => {
-    setSelectedSessionId(session?.id ?? null);
-  };
+  const handleViewDetails = useCallback((sessionId: string) => {
+    router.push(`/session/${sessionId}`);
+  }, [router]);
+
+  const handleCreateSession = useCallback((sessionData: any & { lat: number; lng: number }) => {
+    const newSession: StudySession = {
+      id: `user-${Date.now()}`,
+      title: sessionData.title,
+      subject: sessionData.subject,
+      type: sessionData.type,
+      maxParticipants: sessionData.maxParticipants,
+      duration: sessionData.duration,
+      lat: sessionData.lat,
+      lng: sessionData.lng,
+      startTime: new Date(),
+      status: 'starting-soon',
+      participants: 1, // Host counts as first participant
+    };
+    
+    setSessions(prev => [newSession, ...prev]);
+    setHostedSessions(prev => new Set([...prev, newSession.id]));
+    setSelectedSessionId(newSession.id);
+  }, []);
+
+  const handleJoinSession = useCallback((sessionId: string) => {
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { ...session, participants: Math.min(session.participants + 1, session.maxParticipants) }
+        : session
+    ));
+    setJoinedSessions(prev => new Set([...prev, sessionId]));
+  }, []);
+
+  const handleLeaveSession = useCallback((sessionId: string) => {
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { ...session, participants: Math.max(session.participants - 1, 0) }
+        : session
+    ));
+    setJoinedSessions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sessionId);
+      return newSet;
+    });
+  }, []);
+
+  const handleSessionClick = useCallback((session: StudySession) => {
+    setSelectedSessionId(session.id);
+  }, []);
+
+  const selectedSession = sessions.find(s => s.id === selectedSessionId) || null;
 
   return (
     <>
@@ -41,8 +102,9 @@ export default function HomePage() {
             <div className="h-[70vh] min-h-[500px] w-full">
               <StudyMap
                 sessions={sessionsWithDistance}
-                onSessionSelect={handleSessionSelect}
+                onSessionSelect={handleSessionClick}
                 selectedSessionId={selectedSessionId}
+                onViewDetails={handleViewDetails}
               />
             </div>
           </section>
@@ -52,7 +114,11 @@ export default function HomePage() {
             <div className="mx-auto max-w-7xl px-6 py-12">
               <SessionCarousel
                 sessions={sessionsWithDistance}
-                onSessionSelect={handleSessionSelect}
+                onSessionSelect={handleSessionClick}
+                onJoinSession={handleJoinSession}
+                onLeaveSession={handleLeaveSession}
+                joinedSessions={joinedSessions}
+                hostedSessions={hostedSessions}
               />
             </div>
           </section>
@@ -77,6 +143,20 @@ export default function HomePage() {
             </div>
           </footer>
         </main>
+
+        {/* Floating Action Button */}
+        <FloatingActionButton 
+          onClick={() => setIsCreateModalOpen(true)}
+          isExpanded={isCreateModalOpen}
+        />
+
+        {/* Create Session Modal */}
+        <CreateSessionModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreateSession={handleCreateSession}
+          userLocation={userLocation}
+        />
       </div>
     </>
   );
