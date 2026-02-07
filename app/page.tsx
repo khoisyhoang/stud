@@ -15,6 +15,7 @@ export default function HomePage() {
   const router = useRouter();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  //this will be the real data for all the sessions
   const [sessions, setSessions] = useState(mockSessions);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [joinedSessions, setJoinedSessions] = useState<Set<string>>(new Set());
