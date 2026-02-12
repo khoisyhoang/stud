@@ -282,15 +282,15 @@ export function StudyMap({
       <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2 rounded-lg border border-border/50 bg-card/90 p-3 text-xs backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <div className="h-2.5 w-2.5 rounded-full bg-live shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-          <span className="text-muted-foreground">Live now</span>
+          <span className="text-white">Live now</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-2.5 w-2.5 rounded-full bg-starting-soon" />
-          <span className="text-muted-foreground">Starting soon</span>
+          <span className="text-white">Starting soon</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-2.5 w-2.5 rounded-full bg-finished" />
-          <span className="text-muted-foreground">Finished</span>
+          <span className="text-white">Finished</span>
         </div>
       </div>
     </div>

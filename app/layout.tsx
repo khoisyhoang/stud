@@ -1,7 +1,13 @@
 import React from "react"
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { Rajdhani } from 'next/font/google'
 import './globals.css'
+
+const rajdhani = Rajdhani({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+})
 
 
 
@@ -35,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body className={`${rajdhani.className} antialiased dark`}>
         {children}
         <Analytics />
       </body>
