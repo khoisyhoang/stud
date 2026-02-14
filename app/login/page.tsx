@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuthStore } from '@/store/auth-store';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -44,10 +45,14 @@ export default function LoginPage() {
       console.log(response);
       if (response.ok) {
         const result = await response.json();
-        // Handle successful login - you might want to store the token
-        alert('Login successful! Token: ' + result.token);
-        // Redirect to home page or store auth state
-        window.location.href = '/';
+        if (result.code === "success") {
+          const { setAccessToken } = useAuthStore.getState();
+          setAccessToken(result.data.accessToken);
+          alert("token is: " + result.data.accessToken);
+          window.location.href = '/';
+        } else {
+          setError(result.message || 'Login failed');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Login failed');
