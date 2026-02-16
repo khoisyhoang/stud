@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuthStore } from '@/store/auth-store';
+import { GoogleLogin } from '@react-oauth/google';
+import { handleGoogleAuth } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -35,7 +37,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-       const response = await fetch('http://localhost:4000/auth/login', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BE_API}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,6 +119,24 @@ export default function LoginPage() {
               {isLoading ? 'AUTHENTICATING...' : 'LOG IN'}
             </Button>
           </form>
+
+          <div className="mt-4 flex items-center">
+            <div className="flex-1 border-t border-border"></div>
+            <span className="px-2 text-muted-foreground text-sm">or</span>
+            <div className="flex-1 border-t border-border"></div>
+          </div>
+
+          <div className="mt-4">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                console.log(credentialResponse);
+                handleGoogleAuth(credentialResponse);
+              }}
+              onError={() => {
+                console.log('Login Failed');
+              }}
+            />
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-muted-foreground text-sm">

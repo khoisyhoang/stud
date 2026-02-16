@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { Rajdhani } from 'next/font/google'
 import './globals.css'
+import { Providers } from './providers'
 
 const rajdhani = Rajdhani({
   subsets: ['latin'],
@@ -42,7 +43,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${rajdhani.className} antialiased dark`}>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Analytics />
       </body>
     </html>

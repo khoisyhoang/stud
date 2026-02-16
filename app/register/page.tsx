@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { GoogleLogin } from '@react-oauth/google';
+import { handleGoogleAuth } from '@/lib/utils';
 
 const signupSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -37,7 +39,7 @@ export default function SignupPage() {
     setSuccess(false);
 
     try {
-      const response = await fetch('http://localhost:4000/auth/register', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BE_API}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,6 +137,23 @@ export default function SignupPage() {
               {isLoading ? 'INITIALIZING...' : 'SIGN UP'}
             </Button>
           </form>
+
+          <div className="mt-4 flex items-center">
+            <div className="flex-1 border-t border-border"></div>
+            <span className="px-2 text-muted-foreground text-sm">or</span>
+            <div className="flex-1 border-t border-border"></div>
+          </div>
+
+          <div className="mt-4">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                handleGoogleAuth(credentialResponse);
+              }}
+              onError={() => {
+                console.log('Signup Failed');
+              }}
+            />
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-muted-foreground text-sm">
