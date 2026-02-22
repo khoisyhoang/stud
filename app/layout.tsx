@@ -1,11 +1,11 @@
 import React from "react"
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import { Rajdhani } from 'next/font/google'
+import { Be_Vietnam_Pro } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 
-const rajdhani = Rajdhani({
+const vietnamPro = Be_Vietnam_Pro({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
 })
@@ -42,7 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${rajdhani.className} antialiased dark`}>
+      <body className={`${vietnamPro.className} antialiased dark`}>
         <Providers>
           {children}
         </Providers>

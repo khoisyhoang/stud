@@ -70,7 +70,7 @@ export function StudyMap({
         }
       );
     }
-  }, [navigator.geolocation]);
+  }, [navigator?.geolocation]);
 
   // Handle external session selection (from carousel)
   useEffect(() => {
